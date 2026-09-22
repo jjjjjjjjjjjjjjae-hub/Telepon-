@@ -28,3 +28,5 @@ jobs:
           git add sendstone_new.glb
           git commit -m "Add sendstone_new.glb" || exit 0
           git push
+
+# trigger 2
