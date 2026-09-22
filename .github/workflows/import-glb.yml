@@ -1,0 +1,30 @@
+name: Import GLB
+
+on:
+  push:
+    paths:
+      - '.github/workflows/import-glb.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-glb:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download model
+        run: |
+          curl -L --fail --retry 3 'https://ucdd7050f48dd4d39d4b9cb2c2a8.dl.dropboxusercontent.com/cd/0/get/DInSteFEVYaYc5UfWTgn9Z4R2X4UpHg17Vs52Axy0tHRluVlGqsR4Ic-XBjEMBX49-tDVb_F8voNL05VMqacQFFwmUZzk6CI-9XVGwOYp-0GxKD9vjdKIv7icU4HGDfGADZp-YJEucuPPJW7Ul5ykrQXcmnqpn9lvbPmt-g2C4lORA/file?c_luid=52ca8cfe' -o sendstone_new.glb
+          test -s sendstone_new.glb
+
+      - name: Commit model
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sendstone_new.glb
+          git commit -m "Add sendstone_new.glb" || exit 0
+          git push
