@@ -12,14 +12,14 @@ canvas{display:block}
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"}}</script>
 </head>
 <body>
-<div id="msg">sendstone_new.glb жүктелуде…</div>
-
+<div id="msg">Карта мен кейіпкер жүктелуде…</div>
 <script type="module">
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 
-const MODEL_URL = './sendstone_new.glb';
+const MAP_URL='./sendstone_new.glb';
+const PLAYER_URL='https://uc48aa35ee8557383a3f2c945ff3.dl.dropboxusercontent.com/cd/0/get/DInGnC2wxd-6U-vb1Pm09V2iVhG9jwepTlZqi9rGbJR8x1mrqyn7bgk-PMvzL5GX9UDgTSZ1r4eC2HiNwQuAUBnXmVnYKbalN2jGGczrcRfSrg99cg8Gze89JlesQiGgUCTZ5DAL-M1WwlrwUCBts-KIum6QcTVJedCFhU6rU_UOkg/file?c_luid=52ca8cfe';
 
 const msg=document.getElementById('msg');
 const scene=new THREE.Scene();
@@ -41,30 +41,44 @@ const sun=new THREE.DirectionalLight(0xffffff,2);
 sun.position.set(5,10,5);
 scene.add(sun);
 
-const loader = new GLTFLoader();
+const loader=new GLTFLoader();
 
-loader.load(
-  MODEL_URL,
-  (gltf) => {
-    scene.add(gltf.scene);
+const mapGltf=await loader.loadAsync(MAP_URL);
+const map=mapGltf.scene;
+scene.add(map);
 
-    const box=new THREE.Box3().setFromObject(gltf.scene);
-    const size=box.getSize(new THREE.Vector3());
-    const center=box.getCenter(new THREE.Vector3());
-    const m=Math.max(size.x,size.y,size.z)||1;
+const mapBox=new THREE.Box3().setFromObject(map);
+const mapSize=mapBox.getSize(new THREE.Vector3());
+const mapCenter=mapBox.getCenter(new THREE.Vector3());
+const m=Math.max(mapSize.x,mapSize.y,mapSize.z)||1;
 
-    camera.position.set(center.x+m,center.y+m*0.7,center.z+m);
-    controls.target.copy(center);
-    controls.update();
+camera.position.set(mapCenter.x+m,mapCenter.y+m*0.7,mapCenter.z+m);
+controls.target.copy(mapCenter);
+controls.update();
 
-    msg.style.display='none';
-  },
-  undefined,
-  (error) => {
-    console.error(error);
-    msg.textContent='sendstone_new.glb табылмады';
-  }
-);
+const playerGltf=await loader.loadAsync(PLAYER_URL);
+const player=playerGltf.scene;
+scene.add(player);
+
+let pBox=new THREE.Box3().setFromObject(player);
+const pSize=pBox.getSize(new THREE.Vector3());
+const targetHeight=Math.max(mapSize.y*0.035,0.01);
+const scale=targetHeight/Math.max(pSize.y,0.0001);
+player.scale.setScalar(scale);
+player.updateMatrixWorld(true);
+
+pBox=new THREE.Box3().setFromObject(player);
+const pCenter=pBox.getCenter(new THREE.Vector3());
+
+player.position.x += mapCenter.x-pCenter.x;
+player.position.z += mapCenter.z-pCenter.z;
+player.updateMatrixWorld(true);
+
+pBox=new THREE.Box3().setFromObject(player);
+player.position.y += mapBox.min.y-pBox.min.y;
+player.updateMatrixWorld(true);
+
+msg.style.display='none';
 
 addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight;
