@@ -1,0 +1,30 @@
+name: Import Character
+
+on:
+  push:
+    paths:
+      - '.github/workflows/import-character.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-character:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download character
+        run: |
+          curl -L --fail --retry 3 'https://uc48a928905c1c1d0a208efe4886.dl.dropboxusercontent.com/cd/0/get/DIqtr0NRpnNk8CNmKO32PT6YxG9AEvaNUS03uqhVhdTpMvNg_mdkJYDJxPxhgP9T0RkfuTPGwPw_QkMeSekmS1uw-gLIJGh6fPAC75snHHZfVEWwBEINsKl4DONlVX3Ak_Th73CmjmUg5nZLqe8Ff5s7OUZR1LW7fOC7S3TjFRFB4Q/file?c_luid=52ca8cfe' -o sas__cs2_agent_model_blue.glb
+          test -s sas__cs2_agent_model_blue.glb
+
+      - name: Commit character
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sas__cs2_agent_model_blue.glb
+          git commit -m "Add character GLB" || exit 0
+          git push
