@@ -1,0 +1,31 @@
+name: Import Assets
+
+on:
+  push:
+    paths:
+      - '.github/workflows/import-assets.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download files
+        run: |
+          curl -L --fail --retry 3 'https://uc44542e3f1a9a4b13859d4e67fb.dl.dropboxusercontent.com/cd/0/get/DImS_aQYJ_VuyGlCu5t_i-jYTPz2uHHmojT3nsdSrUHT_o6sw5SVmTvHpGX5wlSklnbyFthG0a9sJda2B6bM36dwtEsopuZnUeIE3Z-JU42MfjNUe_5VWFmSEmL03GGmzuCpzpHyKt-Bya4TBXu_oRl2zJuSa19IH-xiWdnENLSEJA/file?c_luid=52ca8cfe' -o sas__cs2_agent_model_blue.glb
+          curl -L --fail --retry 3 'https://ucca44f9aace577e04af08c6cffb.dl.dropboxusercontent.com/cd/0/get/DInwM15N8qLDZ0yqNHCysW8OS7mmUCCSO955asXyobhB6iopnumQbOvMUXYzZZZI0i77SsqQkp1YnQlTSJZQ-UeRSLxH8Sv9I0TZesbgPerr3ACYqsosOs3qAsYZs58105nElpQ_o-uRX914CHRs7mmQ2To8vvAunb7TdEflrKEFoA/file?c_luid=52ca8cfe' -o Idle.fbx
+          test -s sas__cs2_agent_model_blue.glb
+          test -s Idle.fbx
+
+      - name: Commit files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sas__cs2_agent_model_blue.glb Idle.fbx
+          git commit -m "Add character model and idle animation" || exit 0
+          git push
