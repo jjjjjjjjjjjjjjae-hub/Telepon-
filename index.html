@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>sendstone_new</title>
+<title>Almas Game</title>
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111}
 canvas{display:block}
@@ -13,28 +13,26 @@ canvas{display:block}
 </head>
 <body>
 <div id="msg">Карта мен кейіпкер жүктелуде…</div>
+
 <script type="module">
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 
 const MAP_URL='./sendstone_new.glb';
-const PLAYER_URL='https://uc48aa35ee8557383a3f2c945ff3.dl.dropboxusercontent.com/cd/0/get/DInGnC2wxd-6U-vb1Pm09V2iVhG9jwepTlZqi9rGbJR8x1mrqyn7bgk-PMvzL5GX9UDgTSZ1r4eC2HiNwQuAUBnXmVnYKbalN2jGGczrcRfSrg99cg8Gze89JlesQiGgUCTZ5DAL-M1WwlrwUCBts-KIum6QcTVJedCFhU6rU_UOkg/file?c_luid=52ca8cfe';
+const PLAYER_URL='./sas__cs2_agent_model_blue.glb';
 
 const msg=document.getElementById('msg');
+
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x222222);
 
-const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.01,10000);
-camera.position.set(3,2,3);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.001,1000);
 
-const renderer=new THREE.WebGLRenderer({antialias:true});
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setSize(innerWidth,innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
-
-const controls=new OrbitControls(camera,renderer.domElement);
-controls.enableDamping=true;
 
 scene.add(new THREE.HemisphereLight(0xffffff,0x444444,2));
 const sun=new THREE.DirectionalLight(0xffffff,2);
@@ -42,43 +40,100 @@ sun.position.set(5,10,5);
 scene.add(sun);
 
 const loader=new GLTFLoader();
+let player=null;
+let playerHeight=0.05;
 
-const mapGltf=await loader.loadAsync(MAP_URL);
-const map=mapGltf.scene;
-scene.add(map);
+function getFloorY(map,x,z){
+  const box=new THREE.Box3().setFromObject(map);
+  const height=Math.max(box.max.y-box.min.y,0.1);
+  const ray=new THREE.Raycaster(
+    new THREE.Vector3(x,box.max.y+height*4,z),
+    new THREE.Vector3(0,-1,0),
+    0,
+    height*10
+  );
 
-const mapBox=new THREE.Box3().setFromObject(map);
-const mapSize=mapBox.getSize(new THREE.Vector3());
-const mapCenter=mapBox.getCenter(new THREE.Vector3());
-const m=Math.max(mapSize.x,mapSize.y,mapSize.z)||1;
+  const hits=ray.intersectObject(map,true);
+  let best=null;
 
-camera.position.set(mapCenter.x+m,mapCenter.y+m*0.7,mapCenter.z+m);
-controls.target.copy(mapCenter);
-controls.update();
+  for(const hit of hits){
+    if(!hit.face) continue;
 
-const playerGltf=await loader.loadAsync(PLAYER_URL);
-const player=playerGltf.scene;
-scene.add(player);
+    const normalMatrix=new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld);
+    const normal=hit.face.normal.clone().applyMatrix3(normalMatrix).normalize();
 
-let pBox=new THREE.Box3().setFromObject(player);
-const pSize=pBox.getSize(new THREE.Vector3());
-const targetHeight=Math.max(mapSize.y*0.035,0.01);
-const scale=targetHeight/Math.max(pSize.y,0.0001);
-player.scale.setScalar(scale);
-player.updateMatrixWorld(true);
+    if(normal.y>0.35 && (best===null || hit.point.y>best)){
+      best=hit.point.y;
+    }
+  }
 
-pBox=new THREE.Box3().setFromObject(player);
-const pCenter=pBox.getCenter(new THREE.Vector3());
+  return best===null ? box.min.y : best;
+}
 
-player.position.x += mapCenter.x-pCenter.x;
-player.position.z += mapCenter.z-pCenter.z;
-player.updateMatrixWorld(true);
+function setThirdPersonCamera(){
+  if(!player) return;
 
-pBox=new THREE.Box3().setFromObject(player);
-player.position.y += mapBox.min.y-pBox.min.y;
-player.updateMatrixWorld(true);
+  const target=new THREE.Vector3(
+    player.position.x,
+    player.position.y+playerHeight*0.72,
+    player.position.z
+  );
 
-msg.style.display='none';
+  camera.position.set(
+    player.position.x,
+    player.position.y+playerHeight*1.45,
+    player.position.z+playerHeight*4.2
+  );
+
+  camera.lookAt(target);
+}
+
+async function start(){
+  try{
+    msg.textContent='Карта жүктелуде…';
+    const mapGltf=await loader.loadAsync(MAP_URL);
+    const map=mapGltf.scene;
+    scene.add(map);
+
+    const mapBox=new THREE.Box3().setFromObject(map);
+    const mapCenter=mapBox.getCenter(new THREE.Vector3());
+
+    msg.textContent='Кейіпкер жүктелуде…';
+    const playerGltf=await loader.loadAsync(PLAYER_URL);
+    player=playerGltf.scene;
+
+    player.rotation.z=Math.PI/2;
+    player.updateMatrixWorld(true);
+
+    let pBox=new THREE.Box3().setFromObject(player);
+    playerHeight=pBox.getSize(new THREE.Vector3()).y || 0.05;
+
+    const pCenter=pBox.getCenter(new THREE.Vector3());
+    player.position.x+=mapCenter.x-pCenter.x;
+    player.position.z+=mapCenter.z-pCenter.z;
+    player.updateMatrixWorld(true);
+
+    pBox=new THREE.Box3().setFromObject(player);
+    const floorY=getFloorY(map,player.position.x,player.position.z);
+    player.position.y+=floorY-pBox.min.y;
+    player.updateMatrixWorld(true);
+
+    scene.add(player);
+
+    pBox=new THREE.Box3().setFromObject(player);
+    playerHeight=pBox.getSize(new THREE.Vector3()).y || playerHeight;
+
+    camera.near=Math.max(playerHeight*0.02,0.0005);
+    camera.far=Math.max(100,mapBox.getSize(new THREE.Vector3()).length()*20);
+    camera.updateProjectionMatrix();
+
+    setThirdPersonCamera();
+    msg.style.display='none';
+  }catch(error){
+    console.error(error);
+    msg.textContent='Жүктеу қатесі';
+  }
+}
 
 addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight;
@@ -87,9 +142,11 @@ addEventListener('resize',()=>{
 });
 
 renderer.setAnimationLoop(()=>{
-  controls.update();
+  if(player) setThirdPersonCamera();
   renderer.render(scene,camera);
 });
+
+start();
 </script>
 </body>
 </html>
